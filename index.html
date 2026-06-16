@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous" />
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <section class="max-w-6xl mx-auto px-5 py-10">
+
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-blue-600 mb-8">
+            Course Add View Delete + Cart Order
+        </h1>
+
+        <!-- Add Course Form -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg mb-10">
+            <input type="text" id="courseName" placeholder="Enter course name"
+                class="w-full border p-3 rounded-lg mb-4 outline-none focus:border-blue-600" />
+
+            <input type="number" id="coursePrice" placeholder="Enter course price"
+                class="w-full border p-3 rounded-lg mb-4 outline-none focus:border-blue-600" />
+
+            <button onclick="addCourse()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg w-full">
+                Add Course
+            </button>
+        </div>
+
+        <!-- Course List -->
+        <h2 class="text-2xl font-bold mb-5">Course List</h2>
+
+        <div id="courseList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10"></div>
+
+        <!-- Cart -->
+        <h2 class="text-2xl font-bold mb-5">My Cart</h2>
+
+        <div id="cartList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-5"></div>
+
+        <h2 id="totalPrice" class="text-xl font-bold mb-5 text-green-700"></h2>
+
+        <button onclick="placeOrder()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg mb-10">
+            Place Order
+        </button>
+
+        <!-- Order List -->
+        <h2 class="text-2xl font-bold mb-5">Order List</h2>
+
+        <div id="orderList" class="space-y-5"></div>
+
+    </section>
+
+    <script>
+        // Default courses
+        let defaultCourses = [
+            { id: 1, name: "React JS", price: 5000 },
+            { id: 2, name: "Next JS", price: 6000 },
+            { id: 3, name: "Vue JS", price: 5000 }
+        ];
+
+        // LocalStorage data load
+        let courses = JSON.parse(localStorage.getItem("courses")) || defaultCourses;
+        let cart = JSON.parse(localStorage.getItem("cart")) || [];
+        let orders = JSON.parse(localStorage.getItem("orders")) || [];
+
+        // Save courses in localStorage first time
+        localStorage.setItem("courses", JSON.stringify(courses));
+
+        // Add Course
+        function addCourse() {
+            let courseName = document.getElementById("courseName").value.trim();
+            let coursePrice = document.getElementById("coursePrice").value.trim();
+
+            if (courseName === "" || coursePrice === "") {
+                alert("Please fill all fields");
+                return;
+            }
+
+            let course = {
+                id: Date.now(),
+                name: courseName,
+                price: Number(coursePrice)
+            };
+
+            courses.push(course);
+            localStorage.setItem("courses", JSON.stringify(courses));
+
+            document.getElementById("courseName").value = "";
+            document.getElementById("coursePrice").value = "";
+
+            showCourses();
+        }
+
+        // Show Courses
+        function showCourses() {
+            let courseList = document.getElementById("courseList");
+            courseList.innerHTML = "";
+
+            if (courses.length === 0) {
+                courseList.innerHTML = `
+          <p class="text-red-600 font-bold">No course found</p>
+        `;
+                return;
+            }
+
+            courses.forEach(function (course) {
+                courseList.innerHTML += `
+          <div class="bg-white rounded-2xl shadow-lg p-5">
+            <h2 class="text-2xl font-bold text-gray-800">
+              ${course.name}
+            </h2>
+
+            <p class="text-gray-600 mt-3">
+              Price: ₹${course.price}
+            </p>
+
+            <button
+              class="bg-blue-600 hover:bg-red-700 text-white w-full py-3 rounded-lg mt-5"
+              onclick="deleteCourse(${course.id})"
+            >
+              Delete
+            </button>
+
+            <button
+              class="bg-blue-600 hover:bg-blue-700 text-white w-full py-3 rounded-lg mt-3"
+              onclick="addToCart(${course.id})"
+            >
+              Add To Cart
+            </button>
+          </div>
+        `;
+            });
+        }
+
+        // Delete Course
+        function deleteCourse(id) {
+            courses = courses.filter(function (course) {
+                return course.id !== id;
+            });
+
+            cart = cart.filter(function (item) {
+                return item.id !== id;
+            });
+
+            localStorage.setItem("courses", JSON.stringify(courses));
+            localStorage.setItem("cart", JSON.stringify(cart));
+
+            showCourses();
+            showCart();
+        }
+
+        // Add To Cart
+        function addToCart(id) {
+            let course = courses.find(function (item) {
+                return item.id === id;
+            });
+
+            let exist = cart.find(function (item) {
+                return item.id === id;
+            });
+
+            if (exist) {
+                alert("Course already added to cart");
+                return;
+            }
+
+            cart.push(course);
+            localStorage.setItem("cart", JSON.stringify(cart));
+
+            showCart();
+        }
+
+        // Show Cart
+        function showCart() {
+            let cartList = document.getElementById("cartList");
+            let totalPrice = document.getElementById("totalPrice");
+
+            cartList.innerHTML = "";
+
+            if (cart.length === 0) {
+                cartList.innerHTML = `
+          <p class="text-red-600 font-bold bg-white p-5 rounded-xl shadow">
+            Cart is empty
+          </p>
+        `;
+                totalPrice.innerText = "Total Price: ₹0";
+                return;
+            }
+
+            let total = 0;
+
+            cart.forEach(function (item) {
+                total += Number(item.price);
+
+                cartList.innerHTML += `
+          <div class="bg-white rounded-2xl shadow-lg p-5">
+            <h2 class="text-2xl font-bold text-gray-800">
+              ${item.name}
+            </h2>
+
+            <p class="text-gray-600 mt-3">
+              Price: ₹${item.price}
+            </p>
+
+            <button
+              class="bg-blue-600 hover:bg-red-700 text-white w-full py-3 rounded-lg mt-5"
+              onclick="removeCart(${item.id})"
+            >
+              Remove
+            </button>
+          </div>
+        `;
+            });
+
+            totalPrice.innerText = "Total Price: ₹" + total;
+        }
+
+        // Remove Cart
+        function removeCart(id) {
+            cart = cart.filter(function (item) {
+                return item.id !== id;
+            });
+
+            localStorage.setItem("cart", JSON.stringify(cart));
+            showCart();
+        }
+
+        // Place Order
+        function placeOrder() {
+            if (cart.length === 0) {
+                alert("Cart is empty. Please add course first.");
+                return;
+            }
+
+            let total = 0;
+
+            cart.forEach(function (item) {
+                total += Number(item.price);
+            });
+
+            let order = {
+                id: Date.now(),
+                items: cart,
+                total: total,
+                date: new Date().toLocaleString(),
+                status: "Processing"
+            };
+
+            orders.push(order);
+            localStorage.setItem("orders", JSON.stringify(orders));
+
+            cart = [];
+            localStorage.setItem("cart", JSON.stringify(cart));
+
+            alert("Order placed successfully");
+
+            showCart();
+            showOrders();
+        }
+
+        // Show Orders
+        function showOrders() {
+            let orderList = document.getElementById("orderList");
+            orderList.innerHTML = "";
+
+            if (orders.length === 0) {
+                orderList.innerHTML = `
+          <p class="text-red-600 font-bold bg-white p-5 rounded-xl shadow">
+            No order found
+          </p>
+        `;
+                return;
+            }
+
+            orders.forEach(function (order) {
+                let itemNames = "";
+
+                order.items.forEach(function (item) {
+                    itemNames += `
+            <li>${item.name} - ₹${item.price}</li>
+          `;
+                });
+
+                orderList.innerHTML += `
+          <div class="bg-white p-5 rounded-2xl shadow-lg">
+            <h2 class="text-xl font-bold text-blue-600">
+              Order ID: ${order.id}
+            </h2>
+
+            <p class="text-gray-600 mt-2">
+              Date: ${order.date}
+            </p>
+
+            <p class="text-gray-600 mt-2">
+              Status: 
+              <span class="text-yellow-600 font-bold">
+                ${order.status}
+              </span>
+            </p>
+
+            <ul class="list-disc ml-6 mt-3 text-gray-700">
+              ${itemNames}
+            </ul>
+
+            <h3 class="text-lg font-bold text-green-700 mt-3">
+              Total: ₹${order.total}
+            </h3>
+
+            <button
+              onclick="deleteOrder(${order.id})"
+              class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg mt-4"
+            >
+              Delete Order
+            </button>
+          </div>
+        `;
+            });
+        }
+
+        // Delete Order
+        function deleteOrder(id) {
+            orders = orders.filter(function (order) {
+                return order.id !== id;
+            });
+
+            localStorage.setItem("orders", JSON.stringify(orders));
+            showOrders();
+        }
+
+        // Page load functions
+        showCourses();
+        showCart();
+        showOrders();
+    </script>
+
+</body>
+
+</html>
